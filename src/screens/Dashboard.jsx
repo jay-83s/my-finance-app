@@ -7,8 +7,8 @@ import CurrencySwitcher from "../components/CurrencySwitcher";
 import TransactionItem from "../components/TransactionItem";
 import AddTransactionModal from "../components/AddTransactionModal";
 
-export default function Dashboard({ finance }) {
-  const { transactions, currency, setCurrency, balance, totalExpenses, addTransaction, setScreen } = finance;
+export default function Dashboard({ finance, user, onLogout }) {
+  const { transactions, currency, setCurrency, balance, totalExpenses, addTransaction, setScreen } = finance
   const [showModal, setShowModal] = useState(false);
 
   const fmtTooltip = (v) => {
@@ -19,17 +19,34 @@ export default function Dashboard({ finance }) {
   return (
     <div style={{ padding: "24px 20px 100px" }}>
 
-      {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
-        <div>
-          <p style={{ color: COLORS.muted, fontSize: 13, margin: 0 }}>Welcome back 👋</p>
-          <h2 style={{ margin: "4px 0 0", fontSize: 20, fontWeight: 700, color: COLORS.text, fontFamily: "'Sora', sans-serif" }}>
-            Claudia
-          </h2>
-        </div>
-        <CurrencySwitcher currency={currency} setCurrency={setCurrency} />
-      </div>
-
+    {/* Header */}
+<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
+  <div>
+    <p style={{ color: COLORS.muted, fontSize: 13, margin: 0 }}>Welcome back 👋</p>
+    <h2 style={{ margin: '4px 0 0', fontSize: 20, fontWeight: 700, color: COLORS.text, fontFamily: "'Sora', sans-serif" }}>
+      {user?.name || 'User'}
+    </h2>
+  </div>
+  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+    <CurrencySwitcher currency={currency} setCurrency={setCurrency} />
+    <button
+      onClick={onLogout}
+      style={{
+        background: '#FFF5F5',
+        border: '1.5px solid #FCA5A5',
+        borderRadius: 20,
+        padding: '7px 14px',
+        cursor: 'pointer',
+        color: COLORS.red,
+        fontWeight: 700,
+        fontSize: 13,
+        fontFamily: "'DM Sans', sans-serif",
+      }}
+    >
+      Logout
+    </button>
+  </div>
+</div>
       {/* Balance Card */}
       <div style={{
         background: `linear-gradient(135deg, ${COLORS.teal} 0%, #0A9494 50%, #077070 100%)`,
@@ -97,8 +114,6 @@ export default function Dashboard({ finance }) {
       {/* Quick Actions */}
       <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
         {[
-          { icon: "📤", label: "Send",      action: () => setScreen("transfer")  },
-          { icon: "📥", label: "Receive",   action: () => {}                      },
           { icon: "➕", label: "Add Tx",   action: () => setShowModal(true)      },
           { icon: "📊", label: "Analytics", action: () => setScreen("analytics") },
         ].map(a => (

@@ -1,12 +1,11 @@
 import { COLORS } from "../utils/theme";
 
 const tabs = [
-  { id: "dashboard", icon: "⊞", label: "Home"      },
-  { id: "history",   icon: "↕", label: "History"   },
-  { id: "analytics", icon: "◎", label: "Analytics" },
-  { id: "transfer",  icon: "⇄", label: "Transfer"  },
-];
-
+  { id: 'dashboard', icon: '⊞', label: 'Home'      },
+  { id: 'history',   icon: '↕', label: 'History'   },
+  { id: 'analytics', icon: '◎', label: 'Analytics' },
+  { id: 'profile',   icon: '👤', label: 'Profile'  },
+]
 export default function BottomNav({ screen, setScreen }) {
   return (
     <nav style={{

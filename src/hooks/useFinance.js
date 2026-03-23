@@ -1,60 +1,73 @@
-import { useState } from "react";
-import { initialTransactions } from "../data/seedData";
-import { toKES } from "../utils/currency";
-
-const BASE_BALANCE = 592323;
+import { useState, useEffect } from 'react'
+import { getTransactions, addTransaction, deleteTransaction } from '../api/index'
 
 export function useFinance() {
-  const [transactions, setTransactions] = useState(initialTransactions);
-  const [currency, setCurrency]         = useState("KES");
-  const [screen, setScreen]             = useState("dashboard");
+  const [transactions, setTransactions] = useState([])
+  const [currency, setCurrency]         = useState('KES')
+  const [screen, setScreen]             = useState('dashboard')
+  const [loading, setLoading]           = useState(true)
 
-  // Derived values
-  const balance = transactions.reduce((acc, t) => acc + t.amount, 0) + BASE_BALANCE;
+  // Load transactions from database when app starts
+  useEffect(() => {
+    fetchTransactions()
+  }, [])
 
-  const totalIncome = transactions
-    .filter(t => t.type === "credit")
-    .reduce((a, t) => a + t.amount, 0);
-
-  const totalExpenses = Math.abs(
-    transactions.filter(t => t.type === "debit")
-      .reduce((a, t) => a + t.amount, 0)
-  );
-
-  const categoryTotals = transactions
-    .filter(t => t.type === "debit")
-    .reduce((acc, t) => {
-      acc[t.category] = (acc[t.category] || 0) + Math.abs(t.amount);
-      return acc;
-    }, {});
-
-  // Actions
-  function addTransaction({ label, amount, type, category }) {
-    const amountKES = toKES(parseFloat(amount), currency);
-    const signed    = type === "credit" ? amountKES : -amountKES;
-    const tx = {
-      id: Date.now(), label, amount: signed,
-      type, category, date: "Mar 17, 2026", icon: "💰",
-    };
-    setTransactions(prev => [tx, ...prev]);
+  const fetchTransactions = async () => {
+    try {
+      const res = await getTransactions()
+      setTransactions(res.data)
+    } catch (error) {
+      console.error('Error fetching transactions:', error)
+    } finally {
+      setLoading(false)
+    }
   }
 
-  function sendMoney({ contact, amount }) {
-    const amountKES = toKES(parseFloat(amount), currency);
-    const tx = {
-      id: Date.now(),
-      label: `Send to ${contact.name}`,
-      amount: -amountKES,
-      type: "debit", category: "Transfer",
-      date: "Mar 17, 2026", icon: "📱",
-    };
-    setTransactions(prev => [tx, ...prev]);
+  // Derived values
+  const balance = transactions.reduce((acc, t) => acc + parseFloat(t.amount), 0)
+
+  const totalIncome = transactions
+    .filter(t => t.type === 'credit')
+    .reduce((a, t) => a + parseFloat(t.amount), 0)
+
+  const totalExpenses = Math.abs(
+    transactions
+      .filter(t => t.type === 'debit')
+      .reduce((a, t) => a + parseFloat(t.amount), 0)
+  )
+
+  const categoryTotals = transactions
+    .filter(t => t.type === 'debit')
+    .reduce((acc, t) => {
+      acc[t.category] = (acc[t.category] || 0) + Math.abs(parseFloat(t.amount))
+      return acc
+    }, {})
+
+  // Actions
+  const handleAddTransaction = async ({ label, amount, type, category }) => {
+    try {
+      const date = new Date().toISOString().split('T')[0]
+      await addTransaction({ label, amount: parseFloat(amount), type, category, date })
+      fetchTransactions()
+    } catch (error) {
+      console.error('Error adding transaction:', error)
+    }
+  }
+
+  const handleDeleteTransaction = async (id) => {
+    try {
+      await deleteTransaction(id)
+      fetchTransactions()
+    } catch (error) {
+      console.error('Error deleting transaction:', error)
+    }
   }
 
   return {
     transactions, currency, setCurrency,
-    screen, setScreen,
+    screen, setScreen, loading,
     balance, totalIncome, totalExpenses, categoryTotals,
-    addTransaction, sendMoney,
-  };
+    addTransaction: handleAddTransaction,
+    deleteTransaction: handleDeleteTransaction,
+  }
 }

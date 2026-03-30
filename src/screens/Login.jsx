@@ -1,15 +1,15 @@
 import { useState } from 'react'
 import { Eye, EyeOff } from 'lucide-react'
-import { login, signup, forgotPassword } from '../api/index'
+import { login, signup, forgotPassword, resetPassword } from '../api/index'
 import { COLORS } from '../utils/theme'
 
 export default function Login({ onLogin }) {
-  const [mode, setMode]                   = useState('login') // login | signup | forgot
-  const [form, setForm]                   = useState({ name: '', email: '', password: '', newPassword: '' })
-  const [error, setError]                 = useState('')
-  const [success, setSuccess]             = useState('')
-  const [loading, setLoading]             = useState(false)
-  const [showPassword, setShowPassword]   = useState(false)
+  const [mode, setMode]                       = useState('login')
+  const [form, setForm]                       = useState({ name: '', email: '', password: '', newPassword: '', resetToken: '' })
+  const [error, setError]                     = useState('')
+  const [success, setSuccess]                 = useState('')
+  const [loading, setLoading]                 = useState(false)
+  const [showPassword, setShowPassword]       = useState(false)
   const [showNewPassword, setShowNewPassword] = useState(false)
 
   const handleSubmit = async () => {
@@ -26,12 +26,16 @@ export default function Login({ onLogin }) {
       } else if (mode === 'signup') {
         await signup({ name: form.name, email: form.email, password: form.password })
         setMode('login')
-        setSuccess('Account created! Please log in.')
+        setSuccess('Account created! Check your email for a welcome message.')
 
       } else if (mode === 'forgot') {
-        await forgotPassword({ email: form.email, newPassword: form.newPassword })
+        await forgotPassword({ email: form.email })
+        setSuccess('Reset email sent! Check your inbox and click the link.')
+
+      } else if (mode === 'reset') {
+        await resetPassword({ email: form.email, token: form.resetToken, newPassword: form.newPassword })
         setMode('login')
-        setSuccess('Password reset! Please log in.')
+        setSuccess('Password reset successfully! Please log in.')
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Something went wrong')
@@ -40,9 +44,10 @@ export default function Login({ onLogin }) {
   }
 
   const titles = {
-    login:  { heading: 'Welcome back',       sub: 'Sign in to your account',   btn: 'Login'         },
-    signup: { heading: 'Create account',     sub: 'Start managing your money', btn: 'Create Account' },
-    forgot: { heading: 'Reset password',     sub: 'Enter your email and new password', btn: 'Reset Password' },
+    login:  { sub: 'Sign in to your account',          btn: 'Login'            },
+    signup: { sub: 'Start managing your money',        btn: 'Create Account'   },
+    forgot: { sub: 'Enter your email to get a reset link', btn: 'Send Reset Email' },
+    reset:  { sub: 'Enter your new password',          btn: 'Reset Password'   },
   }
 
   const t = titles[mode]
@@ -84,7 +89,7 @@ export default function Login({ onLogin }) {
         </div>
 
         {/* Toggle — login/signup only */}
-        {mode !== 'forgot' && (
+        {(mode === 'login' || mode === 'signup') && (
           <div style={{
             display: 'flex', background: COLORS.bg,
             borderRadius: 12, padding: 4, marginBottom: 24,
@@ -110,8 +115,8 @@ export default function Login({ onLogin }) {
           </div>
         )}
 
-        {/* Back button for forgot password */}
-        {mode === 'forgot' && (
+        {/* Back button — forgot and reset */}
+        {(mode === 'forgot' || mode === 'reset') && (
           <button
             onClick={() => { setMode('login'); setError(''); setSuccess('') }}
             style={{
@@ -125,7 +130,7 @@ export default function Login({ onLogin }) {
           </button>
         )}
 
-        {/* Name field — signup only */}
+        {/* Name — signup only */}
         {mode === 'signup' && (
           <input
             placeholder="Full Name"
@@ -141,7 +146,7 @@ export default function Login({ onLogin }) {
           />
         )}
 
-        {/* Email */}
+        {/* Email — all modes */}
         <input
           placeholder="Email"
           type="email"
@@ -157,7 +162,7 @@ export default function Login({ onLogin }) {
         />
 
         {/* Password — login and signup */}
-        {mode !== 'forgot' && (
+        {(mode === 'login' || mode === 'signup') && (
           <div style={{ position: 'relative', marginBottom: 12 }}>
             <input
               placeholder="Password"
@@ -186,8 +191,24 @@ export default function Login({ onLogin }) {
           </div>
         )}
 
-        {/* New Password — forgot only */}
-        {mode === 'forgot' && (
+        {/* Reset token — reset mode only */}
+        {mode === 'reset' && (
+          <input
+            placeholder="Reset token from your email"
+            value={form.resetToken}
+            onChange={e => setForm({ ...form, resetToken: e.target.value })}
+            style={{
+              width: '100%', padding: '14px 16px',
+              borderRadius: 12, border: '1.5px solid #E8EEF4',
+              marginBottom: 12, fontSize: 14,
+              boxSizing: 'border-box', outline: 'none',
+              fontFamily: "'DM Sans', sans-serif",
+            }}
+          />
+        )}
+
+        {/* New Password — reset mode only */}
+        {mode === 'reset' && (
           <div style={{ position: 'relative', marginBottom: 12 }}>
             <input
               placeholder="New Password"
@@ -228,6 +249,23 @@ export default function Login({ onLogin }) {
               }}
             >
               Forgot password?
+            </button>
+          </div>
+        )}
+
+        {/* Already have reset token link — forgot mode */}
+        {mode === 'forgot' && (
+          <div style={{ textAlign: 'right', marginBottom: 16 }}>
+            <button
+              onClick={() => { setMode('reset'); setError(''); setSuccess('') }}
+              style={{
+                background: 'none', border: 'none',
+                color: COLORS.teal, fontSize: 12,
+                fontWeight: 600, cursor: 'pointer',
+                fontFamily: "'DM Sans', sans-serif",
+              }}
+            >
+              Already have a reset token? →
             </button>
           </div>
         )}

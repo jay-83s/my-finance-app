@@ -1,16 +1,26 @@
-import { Plus, BarChart2, ArrowUpDown, User } from "lucide-react"
+import { Plus, BarChart2 } from "lucide-react"
 import { useState } from "react"
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts"
-import { COLORS } from "../utils/theme"
+import { useTheme } from "../context/ThemeContext"
+import { LIGHT, DARK } from "../utils/theme"
 import { formatAmount } from "../utils/currency"
 import CurrencySwitcher from "../components/CurrencySwitcher"
 import TransactionItem from "../components/TransactionItem"
 import AddTransactionModal from "../components/AddTransactionModal"
 
-export default function Dashboard({ finance, user }) {
-  const { transactions, currency, setCurrency, balance, totalExpenses, totalIncome, addTransaction, setScreen } = finance
-  const [showModal, setShowModal]     = useState(false)
-  const [chartRange, setChartRange]   = useState("3M")
+export default function Dashboard({ finance, user, isDesktop }) {
+  const {
+    transactions, currency, setCurrency, balance,
+    totalExpenses, totalIncome, addTransaction, setScreen,
+    monthlyIncome, monthlySavings, requiredSavings,
+    remainingToSave, canSpend, availableToSpend
+  } = finance
+
+  const { isDark } = useTheme()
+  const COLORS = isDark ? DARK : LIGHT
+
+  const [showModal, setShowModal]   = useState(false)
+  const [chartRange, setChartRange] = useState("3M")
   const savingsGoalPct = user?.savings_goal || 20
 
   const fmtTooltip = (v) => {
@@ -18,7 +28,6 @@ export default function Dashboard({ finance, user }) {
     return [`KES ${Math.round(v).toLocaleString()}`, ""]
   }
 
-  // Build full monthly chart data from all transactions
   const allMonthlyMap = transactions.reduce((acc, t) => {
     const date  = new Date(t.date)
     const key   = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`
@@ -29,11 +38,7 @@ export default function Dashboard({ finance, user }) {
     return acc
   }, {})
 
-  // Sort by date
-  const allChartData = Object.values(allMonthlyMap)
-    .sort((a, b) => a.key.localeCompare(b.key))
-
-  // Filter based on selected range
+  const allChartData = Object.values(allMonthlyMap).sort((a, b) => a.key.localeCompare(b.key))
   const now        = new Date()
   const monthsBack = chartRange === "3M" ? 3 : chartRange === "6M" ? 6 : 12
 
@@ -45,7 +50,7 @@ export default function Dashboard({ finance, user }) {
   })
 
   return (
-    <div style={{ padding: "24px 20px 100px" }}>
+    <div style={{ padding: isDesktop ? "32px 40px 40px" : "24px 20px 100px" }}>
 
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
@@ -82,7 +87,6 @@ export default function Dashboard({ finance, user }) {
       }}>
         <div style={{ position: "absolute", top: -30, right: -30, width: 120, height: 120, borderRadius: "50%", background: "rgba(255,255,255,0.08)" }} />
         <div style={{ position: "absolute", bottom: -20, right: 40, width: 80, height: 80, borderRadius: "50%", background: "rgba(255,255,255,0.06)" }} />
-
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           <div>
             <p style={{ color: "rgba(255,255,255,0.75)", fontSize: 12, margin: "0 0 6px", letterSpacing: 1, textTransform: "uppercase" }}>
@@ -94,7 +98,6 @@ export default function Dashboard({ finance, user }) {
           </div>
           <CurrencySwitcher currency={currency} setCurrency={setCurrency} compact />
         </div>
-
         <div style={{ display: "flex", gap: 32 }}>
           <div>
             <p style={{ color: "rgba(255,255,255,0.65)", fontSize: 11, margin: "0 0 3px" }}>↓ Income</p>
@@ -110,59 +113,61 @@ export default function Dashboard({ finance, user }) {
           </div>
         </div>
       </div>
+
       {/* Pay Yourself First Card */}
-{monthlyIncome > 0 && (
-  <div style={{
-    background: canSpend ? '#F0FDF4' : '#FFF5F5',
-    border: `1.5px solid ${canSpend ? COLORS.green : COLORS.red}`,
-    borderRadius: 20, padding: '16px 20px', marginBottom: 20,
-  }}>
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-      <div>
-        <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: canSpend ? COLORS.green : COLORS.red }}>
-          {canSpend ? '✅ Savings target met!' : '⚠️ Save before you spend'}
-        </p>
-        <p style={{ margin: '2px 0 0', fontSize: 11, color: COLORS.muted }}>
-          {savingsGoalPct}% savings goal this month
-        </p>
-      </div>
-      <span style={{
-        background: canSpend ? COLORS.green : COLORS.red,
-        color: '#fff', fontSize: 11, fontWeight: 700,
-        padding: '4px 10px', borderRadius: 20,
-      }}>
-        {canSpend ? 'Ready to spend' : `Save ${formatAmount(remainingToSave, currency)} more`}
-      </span>
-    </div>
+      {monthlyIncome > 0 && (
+        <div style={{
+          background: canSpend ? '#F0FDF4' : '#FFF5F5',
+          border: `1.5px solid ${canSpend ? COLORS.green : COLORS.red}`,
+          borderRadius: 20, padding: '16px 20px', marginBottom: 20,
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+            <div>
+              <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: canSpend ? COLORS.green : COLORS.red }}>
+                {canSpend ? '✅ Savings target met!' : '⚠️ Save before you spend'}
+              </p>
+              <p style={{ margin: '2px 0 0', fontSize: 11, color: COLORS.muted }}>
+                {savingsGoalPct}% savings goal this month
+              </p>
+            </div>
+            <span style={{
+              background: canSpend ? COLORS.green : COLORS.red,
+              color: '#fff', fontSize: 11, fontWeight: 700,
+              padding: '4px 10px', borderRadius: 20,
+            }}>
+              {canSpend ? 'Ready to spend' : `Save ${formatAmount(remainingToSave, currency)} more`}
+            </span>
+          </div>
 
-    {/* Progress bar */}
-    <div style={{ height: 8, background: 'rgba(0,0,0,0.08)', borderRadius: 4, marginBottom: 12 }}>
-      <div style={{
-        height: '100%', borderRadius: 4,
-        background: canSpend ? COLORS.green : COLORS.red,
-        width: `${Math.min(100, (monthlySavings / requiredSavings) * 100)}%`,
-        transition: 'width 0.5s',
-      }} />
-    </div>
+          {/* Progress bar */}
+          <div style={{ height: 8, background: 'rgba(0,0,0,0.08)', borderRadius: 4, marginBottom: 12 }}>
+            <div style={{
+              height: '100%', borderRadius: 4,
+              background: canSpend ? COLORS.green : COLORS.red,
+              width: `${Math.min(100, requiredSavings > 0 ? (monthlySavings / requiredSavings) * 100 : 0)}%`,
+              transition: 'width 0.5s',
+            }} />
+          </div>
 
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-      {[
-        { label: 'Monthly Income',   value: monthlyIncome,    color: COLORS.green },
-        { label: 'Required Savings', value: requiredSavings,  color: '#6366F1'    },
-        { label: 'Available Spend',  value: availableToSpend, color: COLORS.teal  },
-      ].map(item => (
-        <div key={item.label} style={{ textAlign: 'center' }}>
-          <p style={{ margin: 0, fontSize: 12, fontWeight: 800, color: item.color }}>
-            {formatAmount(item.value, currency)}
-          </p>
-          <p style={{ margin: '2px 0 0', fontSize: 10, color: COLORS.muted }}>{item.label}</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+            {[
+              { label: 'Monthly Income',   value: monthlyIncome,    color: COLORS.green },
+              { label: 'Required Savings', value: requiredSavings,  color: '#6366F1'    },
+              { label: 'Available Spend',  value: availableToSpend, color: COLORS.teal  },
+            ].map(item => (
+              <div key={item.label} style={{ textAlign: 'center' }}>
+                <p style={{ margin: 0, fontSize: 12, fontWeight: 800, color: item.color }}>
+                  {formatAmount(item.value, currency)}
+                </p>
+                <p style={{ margin: '2px 0 0', fontSize: 10, color: COLORS.muted }}>{item.label}</p>
+              </div>
+            ))}
+          </div>
         </div>
-      ))}
-    </div>
-  </div>
-)}
+      )}
+
       {/* Chart */}
-      <div style={{ background: COLORS.card, borderRadius: 20, padding: "20px 16px", marginBottom: 20, boxShadow: "0 2px 16px rgba(0,0,0,0.05)" }}>
+      <div style={{ background: COLORS.card, borderRadius: 20, padding: "20px 16px", marginBottom: 20, boxShadow: "0 2px 16px rgba(0,0,0,0.05)", border: `1px solid ${COLORS.border}` }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: COLORS.text }}>Spending Overview</h3>
           <div style={{ display: "flex", gap: 6 }}>
@@ -172,8 +177,8 @@ export default function Dashboard({ finance, user }) {
                 onClick={() => setChartRange(r)}
                 style={{
                   padding: "4px 10px", borderRadius: 20, fontSize: 11,
-                  border: `1.5px solid ${chartRange === r ? COLORS.teal : "#E8EEF4"}`,
-                  background: chartRange === r ? COLORS.tealLight : "#fff",
+                  border: `1.5px solid ${chartRange === r ? COLORS.teal : COLORS.border}`,
+                  background: chartRange === r ? COLORS.tealLight : "transparent",
                   color: chartRange === r ? COLORS.teal : COLORS.muted,
                   fontWeight: 600, cursor: "pointer",
                 }}
@@ -183,7 +188,6 @@ export default function Dashboard({ finance, user }) {
             ))}
           </div>
         </div>
-
         {filteredChartData.length > 0 ? (
           <>
             <ResponsiveContainer width="100%" height={160}>
@@ -219,14 +223,13 @@ export default function Dashboard({ finance, user }) {
       {/* Quick Actions */}
       <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
         {[
-          { icon: Plus,        label: "Add Entry", action: () => setShowModal(true)      },
-          { icon: BarChart2,   label: "Analytics", action: () => setScreen("analytics")  },
-         
+          { icon: Plus,     label: "Add Entry", action: () => setShowModal(true)     },
+          { icon: BarChart2, label: "Analytics", action: () => setScreen("analytics") },
         ].map(a => {
           const Icon = a.icon
           return (
             <button key={a.label} onClick={a.action} style={{
-              flex: 1, background: COLORS.card, border: "1.5px solid #E8EEF4",
+              flex: 1, background: COLORS.card, border: `1.5px solid ${COLORS.border}`,
               borderRadius: 16, padding: "14px 8px", cursor: "pointer",
               display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
             }}>
@@ -238,7 +241,7 @@ export default function Dashboard({ finance, user }) {
       </div>
 
       {/* Recent Transactions */}
-      <div style={{ background: COLORS.card, borderRadius: 20, overflow: "hidden", boxShadow: "0 2px 16px rgba(0,0,0,0.05)" }}>
+      <div style={{ background: COLORS.card, borderRadius: 20, overflow: "hidden", boxShadow: "0 2px 16px rgba(0,0,0,0.05)", border: `1px solid ${COLORS.border}` }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 16px 0" }}>
           <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: COLORS.text }}>Recent Transactions</h3>
           <button onClick={() => setScreen("history")} style={{ background: "none", border: "none", color: COLORS.teal, fontSize: 12, cursor: "pointer", fontWeight: 600 }}>
@@ -251,10 +254,7 @@ export default function Dashboard({ finance, user }) {
           </div>
         ) : (
           transactions.slice(0, 4).map((tx, i) => (
-            <TransactionItem
-              key={tx.id} tx={tx} currency={currency}
-              borderBottom={i < 3}
-            />
+            <TransactionItem key={tx.id} tx={tx} currency={currency} borderBottom={i < 3} />
           ))
         )}
       </div>

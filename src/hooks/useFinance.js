@@ -25,27 +25,7 @@ export function useFinance(savingsGoal = 20) {
   // Current month
   const currentMonth = new Date().toISOString().slice(0, 7)
 
-  // All time totals
-  const balance = transactions.reduce((acc, t) => {
-    if (t.type === 'income')  return acc + parseFloat(t.amount)
-    if (t.type === 'expense') return acc - parseFloat(t.amount)
-    if (t.type === 'savings') return acc - parseFloat(t.amount)
-    return acc
-  }, 0)
-
-  const totalIncome = transactions
-    .filter(t => t.type === 'income')
-    .reduce((a, t) => a + parseFloat(t.amount), 0)
-
-  const totalExpenses = transactions
-    .filter(t => t.type === 'expense')
-    .reduce((a, t) => a + parseFloat(t.amount), 0)
-
-  const totalSavings = transactions
-    .filter(t => t.type === 'savings')
-    .reduce((a, t) => a + parseFloat(t.amount), 0)
-
-  // This month's data
+  // This month's figures
   const monthlyIncome = transactions
     .filter(t => t.type === 'income' && t.date?.slice(0, 7) === currentMonth)
     .reduce((a, t) => a + parseFloat(t.amount), 0)
@@ -58,11 +38,39 @@ export function useFinance(savingsGoal = 20) {
     .filter(t => t.type === 'expense' && t.date?.slice(0, 7) === currentMonth)
     .reduce((a, t) => a + parseFloat(t.amount), 0)
 
-  // Pay yourself first calculations
+  // Pay yourself first math
   const requiredSavings  = (savingsGoal / 100) * monthlyIncome
   const remainingToSave  = Math.max(0, requiredSavings - monthlySavings)
   const canSpend         = monthlyIncome === 0 || monthlySavings >= requiredSavings
-  const availableToSpend = Math.max(0, monthlyIncome - requiredSavings - monthlyExpenses)
+
+  // Available to spend = income - required savings - already spent
+  const spendingBudget   = Math.max(0, monthlyIncome - requiredSavings)
+  const availableToSpend = Math.max(0, spendingBudget - monthlyExpenses)
+
+  // Warning when below 5% of spending budget
+  const lowFundsThreshold = spendingBudget * 0.05
+  const isLowFunds        = canSpend && spendingBudget > 0 && availableToSpend <= lowFundsThreshold && availableToSpend >= 0
+
+  // Overall balance = all income - all savings - all expenses
+  const balance = transactions.reduce((acc, t) => {
+    if (t.type === 'income')  return acc + parseFloat(t.amount)
+    if (t.type === 'expense') return acc - parseFloat(t.amount)
+    if (t.type === 'savings') return acc - parseFloat(t.amount)
+    return acc
+  }, 0)
+
+  // All time totals
+  const totalIncome = transactions
+    .filter(t => t.type === 'income')
+    .reduce((a, t) => a + parseFloat(t.amount), 0)
+
+  const totalExpenses = transactions
+    .filter(t => t.type === 'expense')
+    .reduce((a, t) => a + parseFloat(t.amount), 0)
+
+  const totalSavings = transactions
+    .filter(t => t.type === 'savings')
+    .reduce((a, t) => a + parseFloat(t.amount), 0)
 
   const categoryTotals = transactions
     .filter(t => t.type === 'expense')
@@ -84,7 +92,6 @@ export function useFinance(savingsGoal = 20) {
       })
       fetchTransactions()
     } catch (error) {
-      // Return the error so components can handle it
       throw error
     }
   }
@@ -103,7 +110,8 @@ export function useFinance(savingsGoal = 20) {
     screen, setScreen, loading,
     balance, totalIncome, totalExpenses, totalSavings, categoryTotals,
     monthlyIncome, monthlySavings, monthlyExpenses,
-    requiredSavings, remainingToSave, canSpend, availableToSpend,
+    requiredSavings, remainingToSave, canSpend,
+    spendingBudget, availableToSpend, isLowFunds,
     addTransaction: handleAddTransaction,
     deleteTransaction: handleDeleteTransaction,
   }

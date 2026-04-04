@@ -9,12 +9,13 @@ import TransactionItem from "../components/TransactionItem"
 import AddTransactionModal from "../components/AddTransactionModal"
 
 export default function Dashboard({ finance, user, isDesktop }) {
-  const {
-    transactions, currency, setCurrency, balance,
-    totalExpenses, totalIncome, addTransaction, setScreen,
-    monthlyIncome, monthlySavings, requiredSavings,
-    remainingToSave, canSpend, availableToSpend
-  } = finance
+const {
+  transactions, currency, setCurrency, balance,
+  totalExpenses, totalIncome, addTransaction, setScreen,
+  monthlyIncome, monthlySavings, requiredSavings,
+  remainingToSave, canSpend, availableToSpend,
+  isLowFunds, spendingBudget
+} = finance
 
   const { isDark } = useTheme()
   const COLORS = isDark ? DARK : LIGHT
@@ -113,58 +114,80 @@ export default function Dashboard({ finance, user, isDesktop }) {
           </div>
         </div>
       </div>
+{/* Pay Yourself First Card */}
+{monthlyIncome > 0 && (
+  <div style={{
+    background: isLowFunds ? '#FFFBEB' : canSpend ? '#F0FDF4' : '#FFF5F5',
+    border: `1.5px solid ${isLowFunds ? '#F59E0B' : canSpend ? COLORS.green : COLORS.red}`,
+    borderRadius: 20, padding: '16px 20px', marginBottom: 20,
+  }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+      <div>
+        <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: isLowFunds ? '#D97706' : canSpend ? COLORS.green : COLORS.red }}>
+          {!canSpend
+            ? '⚠️ Save before you spend'
+            : isLowFunds
+            ? '⚠️ Running low on funds!'
+            : '✅ Savings target met!'
+          }
+        </p>
+        <p style={{ margin: '2px 0 0', fontSize: 11, color: COLORS.muted }}>
+          {savingsGoalPct}% savings goal · {canSpend && isLowFunds ? 'Spend wisely' : canSpend ? 'You are on track' : 'Save first to unlock spending'}
+        </p>
+      </div>
+      <span style={{
+        background: isLowFunds ? '#F59E0B' : canSpend ? COLORS.green : COLORS.red,
+        color: '#fff', fontSize: 11, fontWeight: 700,
+        padding: '4px 10px', borderRadius: 20, flexShrink: 0,
+      }}>
+        {!canSpend
+          ? `Save ${formatAmount(remainingToSave, currency)} more`
+          : isLowFunds
+          ? 'Low funds!'
+          : 'Ready to spend'
+        }
+      </span>
+    </div>
 
-      {/* Pay Yourself First Card */}
-      {monthlyIncome > 0 && (
-        <div style={{
-          background: canSpend ? '#F0FDF4' : '#FFF5F5',
-          border: `1.5px solid ${canSpend ? COLORS.green : COLORS.red}`,
-          borderRadius: 20, padding: '16px 20px', marginBottom: 20,
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-            <div>
-              <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: canSpend ? COLORS.green : COLORS.red }}>
-                {canSpend ? '✅ Savings target met!' : '⚠️ Save before you spend'}
-              </p>
-              <p style={{ margin: '2px 0 0', fontSize: 11, color: COLORS.muted }}>
-                {savingsGoalPct}% savings goal this month
-              </p>
-            </div>
-            <span style={{
-              background: canSpend ? COLORS.green : COLORS.red,
-              color: '#fff', fontSize: 11, fontWeight: 700,
-              padding: '4px 10px', borderRadius: 20,
-            }}>
-              {canSpend ? 'Ready to spend' : `Save ${formatAmount(remainingToSave, currency)} more`}
-            </span>
-          </div>
+    {/* Low funds warning */}
+    {isLowFunds && (
+      <div style={{
+        background: '#FEF3C7', borderRadius: 10, padding: '10px 14px',
+        marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8,
+      }}>
+        <span style={{ fontSize: 16 }}>💸</span>
+        <p style={{ margin: 0, fontSize: 12, color: '#92400E', fontWeight: 600 }}>
+          You have less than 5% of your spending budget left. Spend wisely!
+        </p>
+      </div>
+    )}
 
-          {/* Progress bar */}
-          <div style={{ height: 8, background: 'rgba(0,0,0,0.08)', borderRadius: 4, marginBottom: 12 }}>
-            <div style={{
-              height: '100%', borderRadius: 4,
-              background: canSpend ? COLORS.green : COLORS.red,
-              width: `${Math.min(100, requiredSavings > 0 ? (monthlySavings / requiredSavings) * 100 : 0)}%`,
-              transition: 'width 0.5s',
-            }} />
-          </div>
+    {/* Progress bar */}
+    <div style={{ height: 8, background: 'rgba(0,0,0,0.08)', borderRadius: 4, marginBottom: 12 }}>
+      <div style={{
+        height: '100%', borderRadius: 4,
+        background: isLowFunds ? '#F59E0B' : canSpend ? COLORS.green : COLORS.red,
+        width: `${Math.min(100, requiredSavings > 0 ? (monthlySavings / requiredSavings) * 100 : 0)}%`,
+        transition: 'width 0.5s',
+      }} />
+    </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-            {[
-              { label: 'Monthly Income',   value: monthlyIncome,    color: COLORS.green },
-              { label: 'Required Savings', value: requiredSavings,  color: '#6366F1'    },
-              { label: 'Available Spend',  value: availableToSpend, color: COLORS.teal  },
-            ].map(item => (
-              <div key={item.label} style={{ textAlign: 'center' }}>
-                <p style={{ margin: 0, fontSize: 12, fontWeight: 800, color: item.color }}>
-                  {formatAmount(item.value, currency)}
-                </p>
-                <p style={{ margin: '2px 0 0', fontSize: 10, color: COLORS.muted }}>{item.label}</p>
-              </div>
-            ))}
-          </div>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+      {[
+        { label: 'Monthly Income',   value: monthlyIncome,    color: COLORS.green },
+        { label: 'Required Savings', value: requiredSavings,  color: '#6366F1'    },
+        { label: 'Available Spend',  value: availableToSpend, color: availableToSpend <= 0 ? COLORS.red : COLORS.teal },
+      ].map(item => (
+        <div key={item.label} style={{ textAlign: 'center' }}>
+          <p style={{ margin: 0, fontSize: 12, fontWeight: 800, color: item.color }}>
+            {formatAmount(item.value, currency)}
+          </p>
+          <p style={{ margin: '2px 0 0', fontSize: 10, color: COLORS.muted }}>{item.label}</p>
         </div>
-      )}
+      ))}
+    </div>
+  </div>
+)}
 
       {/* Chart */}
       <div style={{ background: COLORS.card, borderRadius: 20, padding: "20px 16px", marginBottom: 20, boxShadow: "0 2px 16px rgba(0,0,0,0.05)", border: `1px solid ${COLORS.border}` }}>

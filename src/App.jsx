@@ -14,7 +14,7 @@ import Admin from './screens/Admin'
 
 export default function App() {
   const [user, setUser] = useState(null)
-  const finance         = useFinance()
+  const finance = useFinance(user?.savings_goal || 20)
   const { isDark }      = useTheme()
   const { isDesktop }   = useWindowSize()
   const COLORS          = isDark ? DARK : LIGHT

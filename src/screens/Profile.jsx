@@ -1,8 +1,10 @@
+import { updateSavingsGoal } from '../api/index'
 import { useState } from 'react'
 import { updateProfile, changePassword } from '../api/index'
-import { User, Mail, Shield, LogOut, Crown, Moon, Sun, Eye, EyeOff } from 'lucide-react'
+import { User, Mail, Shield, LogOut, Crown, Moon, Sun, Eye, EyeOff, PiggyBank } from 'lucide-react'
 import { useTheme } from '../context/ThemeContext'
 import { LIGHT, DARK } from '../utils/theme'
+
 
 export default function Profile({ user, onLogout, isDesktop }) {
   const { isDark, toggleTheme } = useTheme()
@@ -16,6 +18,22 @@ const [showNew, setShowNew]           = useState(false)
 const [error, setError]               = useState('')
 const [success, setSuccess]           = useState('')
 const [loading, setLoading]           = useState(false)
+const [goalValue, setGoalValue]   = useState(user?.savings_goal || 20)
+const [goalSuccess, setGoalSuccess] = useState('')
+const [goalLoading, setGoalLoading] = useState(false)
+const handleUpdateGoal = async () => {
+  setGoalLoading(true)
+  try {
+    const res = await updateSavingsGoal({ savings_goal: goalValue })
+    localStorage.setItem('user', JSON.stringify(res.data.user))
+    setGoalSuccess('Savings goal updated!')
+    setTimeout(() => setGoalSuccess(''), 3000)
+  } catch (err) {
+    setError(err.response?.data?.message || 'Something went wrong')
+  }
+  setGoalLoading(false)
+}
+
   const initials = user?.name
     ?.split(' ')
     .map(n => n[0])
@@ -146,6 +164,87 @@ const handleChangePassword = async () => {
         </div>
 
         {/* Right column — Settings + Logout */}
+        {/* Savings Goal */}
+<div style={{
+  background: COLORS.card, borderRadius: 20,
+  padding: '16px', marginBottom: 16,
+  border: `1px solid ${COLORS.border}`,
+  boxShadow: '0 2px 16px rgba(0,0,0,0.05)',
+}}>
+  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+    <div style={{
+      width: 36, height: 36, borderRadius: 10,
+      background: COLORS.tealLight,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>
+      <PiggyBank size={16} color={COLORS.teal} strokeWidth={2} />
+    </div>
+    <div>
+      <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: COLORS.text }}>
+        Savings Goal
+      </p>
+      <p style={{ margin: 0, fontSize: 11, color: COLORS.muted }}>
+        % of income to save first
+      </p>
+    </div>
+  </div>
+
+  {/* Percentage slider */}
+  <div style={{ marginBottom: 12 }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+      <span style={{ fontSize: 12, color: COLORS.muted }}>1%</span>
+      <span style={{ fontSize: 20, fontWeight: 900, color: COLORS.teal, fontFamily: "'Sora', sans-serif" }}>
+        {goalValue}%
+      </span>
+      <span style={{ fontSize: 12, color: COLORS.muted }}>100%</span>
+    </div>
+    <input
+      type="range"
+      min="1"
+      max="100"
+      value={goalValue}
+      onChange={e => setGoalValue(parseInt(e.target.value))}
+      style={{ width: '100%', accentColor: COLORS.teal }}
+    />
+    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
+      {[10, 20, 30, 50].map(v => (
+        <button
+          key={v}
+          onClick={() => setGoalValue(v)}
+          style={{
+            padding: '4px 10px', borderRadius: 20, fontSize: 11,
+            border: `1.5px solid ${goalValue === v ? COLORS.teal : COLORS.border}`,
+            background: goalValue === v ? COLORS.tealLight : 'transparent',
+            color: goalValue === v ? COLORS.teal : COLORS.muted,
+            cursor: 'pointer', fontWeight: 600,
+          }}
+        >
+          {v}%
+        </button>
+      ))}
+    </div>
+  </div>
+
+  {goalSuccess && (
+    <p style={{ color: COLORS.green, fontSize: 12, margin: '0 0 8px', textAlign: 'center' }}>
+      {goalSuccess}
+    </p>
+  )}
+
+  <button
+    onClick={handleUpdateGoal}
+    disabled={goalLoading}
+    style={{
+      width: '100%', padding: '12px', borderRadius: 12,
+      border: 'none', background: COLORS.teal, color: '#fff',
+      fontWeight: 700, fontSize: 14, cursor: 'pointer',
+      fontFamily: "'DM Sans', sans-serif",
+      opacity: goalLoading ? 0.7 : 1,
+    }}
+  >
+    {goalLoading ? 'Saving...' : 'Update Savings Goal'}
+  </button>
+</div>
 
         <div>
           {/* Dark Mode Toggle */}

@@ -38,6 +38,8 @@ export default function AddTransactionModal({ currency, onAdd, onClose }) {
   const [step, setStep] = useState(1)
   const [form, setForm] = useState({ label: "", amount: "", type: "", category: "" })
   const cur = CURRENCIES[currency]
+  const [error, setError]   = useState('')
+  const [loading, setLoading] = useState(false)
 
   const getCategories = () => {
     if (form.type === "expense")  return EXPENSE_CATEGORIES
@@ -48,11 +50,19 @@ export default function AddTransactionModal({ currency, onAdd, onClose }) {
 
   const selectedType = TRANSACTION_TYPES.find(t => t.value === form.type)
 
-  const handleSubmit = () => {
-    if (!form.label || !form.amount || !form.type || !form.category) return
-    onAdd(form)
+const handleSubmit = async () => {
+  if (!form.label || !form.amount || !form.type || !form.category) return
+  setError('')
+  setLoading(true)
+  try {
+    await onAdd(form)
     onClose()
+  } catch (err) {
+    const msg = err.response?.data?.message || 'Something went wrong'
+    setError(msg)
   }
+  setLoading(false)
+}
 
   return (
     <div style={{
@@ -242,6 +252,23 @@ export default function AddTransactionModal({ currency, onAdd, onClose }) {
                   fontFamily: "'DM Sans', sans-serif",
                 }}
               >
+              {error && (
+  <div style={{
+    background: '#FFF5F5', border: '1.5px solid #FCA5A5',
+    borderRadius: 12, padding: '12px 16px', marginBottom: 16,
+    display: 'flex', alignItems: 'flex-start', gap: 10,
+  }}>
+    <span style={{ fontSize: 18, flexShrink: 0 }}>🚫</span>
+    <div>
+      <p style={{ margin: 0, fontWeight: 700, color: COLORS.red, fontSize: 13 }}>
+        Save First!
+      </p>
+      <p style={{ margin: '2px 0 0', color: COLORS.red, fontSize: 12 }}>
+        {error}
+      </p>
+    </div>
+  </div>
+)}
                 Save Entry
               </button>
             </div>

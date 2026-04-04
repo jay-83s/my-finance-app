@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { getTransactions, addTransaction, deleteTransaction } from '../api/index'
 
-export function useFinance() {
+export function useFinance(savingsGoal = 20) {
   const [transactions, setTransactions] = useState([])
   const [currency, setCurrency]         = useState('KES')
   const [screen, setScreen]             = useState('dashboard')
@@ -22,7 +22,10 @@ export function useFinance() {
     }
   }
 
-  // Derived values
+  // Current month
+  const currentMonth = new Date().toISOString().slice(0, 7)
+
+  // All time totals
   const balance = transactions.reduce((acc, t) => {
     if (t.type === 'income')  return acc + parseFloat(t.amount)
     if (t.type === 'expense') return acc - parseFloat(t.amount)
@@ -42,6 +45,25 @@ export function useFinance() {
     .filter(t => t.type === 'savings')
     .reduce((a, t) => a + parseFloat(t.amount), 0)
 
+  // This month's data
+  const monthlyIncome = transactions
+    .filter(t => t.type === 'income' && t.date?.slice(0, 7) === currentMonth)
+    .reduce((a, t) => a + parseFloat(t.amount), 0)
+
+  const monthlySavings = transactions
+    .filter(t => t.type === 'savings' && t.date?.slice(0, 7) === currentMonth)
+    .reduce((a, t) => a + parseFloat(t.amount), 0)
+
+  const monthlyExpenses = transactions
+    .filter(t => t.type === 'expense' && t.date?.slice(0, 7) === currentMonth)
+    .reduce((a, t) => a + parseFloat(t.amount), 0)
+
+  // Pay yourself first calculations
+  const requiredSavings  = (savingsGoal / 100) * monthlyIncome
+  const remainingToSave  = Math.max(0, requiredSavings - monthlySavings)
+  const canSpend         = monthlyIncome === 0 || monthlySavings >= requiredSavings
+  const availableToSpend = Math.max(0, monthlyIncome - requiredSavings - monthlyExpenses)
+
   const categoryTotals = transactions
     .filter(t => t.type === 'expense')
     .reduce((acc, t) => {
@@ -49,7 +71,6 @@ export function useFinance() {
       return acc
     }, {})
 
-  // Actions
   const handleAddTransaction = async ({ label, amount, type, category }) => {
     try {
       const date = new Date().toISOString().split('T')[0]
@@ -63,7 +84,8 @@ export function useFinance() {
       })
       fetchTransactions()
     } catch (error) {
-      console.error('Error adding transaction:', error)
+      // Return the error so components can handle it
+      throw error
     }
   }
 
@@ -80,6 +102,8 @@ export function useFinance() {
     transactions, currency, setCurrency,
     screen, setScreen, loading,
     balance, totalIncome, totalExpenses, totalSavings, categoryTotals,
+    monthlyIncome, monthlySavings, monthlyExpenses,
+    requiredSavings, remainingToSave, canSpend, availableToSpend,
     addTransaction: handleAddTransaction,
     deleteTransaction: handleDeleteTransaction,
   }

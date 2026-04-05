@@ -14,7 +14,8 @@ const {
   totalExpenses, totalIncome, addTransaction, setScreen,
   monthlyIncome, monthlySavings, requiredSavings,
   remainingToSave, canSpend, availableToSpend,
-  isLowFunds, spendingBudget
+  isLowFunds, isNoFunds, spendingBudget,
+  totalSavingsAvailable
 } = finance
 
   const { isDark } = useTheme()
@@ -117,14 +118,16 @@ const {
 {/* Pay Yourself First Card */}
 {monthlyIncome > 0 && (
   <div style={{
-    background: isLowFunds ? '#FFFBEB' : canSpend ? '#F0FDF4' : '#FFF5F5',
-    border: `1.5px solid ${isLowFunds ? '#F59E0B' : canSpend ? COLORS.green : COLORS.red}`,
+    background: isNoFunds ? '#FFF5F5' : isLowFunds ? '#FFFBEB' : canSpend ? '#F0FDF4' : '#FFF5F5',
+    border: `1.5px solid ${isNoFunds ? COLORS.red : isLowFunds ? '#F59E0B' : canSpend ? COLORS.green : COLORS.red}`,
     borderRadius: 20, padding: '16px 20px', marginBottom: 20,
   }}>
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
       <div>
-        <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: isLowFunds ? '#D97706' : canSpend ? COLORS.green : COLORS.red }}>
-          {!canSpend
+        <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: isNoFunds ? COLORS.red : isLowFunds ? '#D97706' : canSpend ? COLORS.green : COLORS.red }}>
+          {isNoFunds
+            ? '🚫 Insufficient funds'
+            : !canSpend
             ? '⚠️ Save before you spend'
             : isLowFunds
             ? '⚠️ Running low on funds!'
@@ -132,32 +135,53 @@ const {
           }
         </p>
         <p style={{ margin: '2px 0 0', fontSize: 11, color: COLORS.muted }}>
-          {savingsGoalPct}% savings goal · {canSpend && isLowFunds ? 'Spend wisely' : canSpend ? 'You are on track' : 'Save first to unlock spending'}
+          {isNoFunds
+            ? 'Kindly top up your account to continue spending'
+            : !canSpend
+            ? 'Save first to unlock spending'
+            : isLowFunds
+            ? 'Less than 5% remaining — spend wisely'
+            : `${savingsGoalPct}% savings goal · You are on track`
+          }
         </p>
       </div>
       <span style={{
-        background: isLowFunds ? '#F59E0B' : canSpend ? COLORS.green : COLORS.red,
+        background: isNoFunds ? COLORS.red : isLowFunds ? '#F59E0B' : canSpend ? COLORS.green : COLORS.red,
         color: '#fff', fontSize: 11, fontWeight: 700,
         padding: '4px 10px', borderRadius: 20, flexShrink: 0,
       }}>
-        {!canSpend
+        {isNoFunds
+          ? 'No funds'
+          : !canSpend
           ? `Save ${formatAmount(remainingToSave, currency)} more`
           : isLowFunds
           ? 'Low funds!'
-          : 'Ready to spend'
+          : 'Ready'
         }
       </span>
     </div>
 
-    {/* Low funds warning */}
-    {isLowFunds && (
+    {/* Warning messages */}
+    {isNoFunds && (
+      <div style={{
+        background: '#FEE2E2', borderRadius: 10, padding: '10px 14px',
+        marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8,
+      }}>
+        <span style={{ fontSize: 16 }}>🚫</span>
+        <p style={{ margin: 0, fontSize: 12, color: '#991B1B', fontWeight: 600 }}>
+          You have used all your spending budget. Kindly top up your account or move some savings to spending.
+        </p>
+      </div>
+    )}
+
+    {isLowFunds && !isNoFunds && (
       <div style={{
         background: '#FEF3C7', borderRadius: 10, padding: '10px 14px',
         marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8,
       }}>
         <span style={{ fontSize: 16 }}>💸</span>
         <p style={{ margin: 0, fontSize: 12, color: '#92400E', fontWeight: 600 }}>
-          You have less than 5% of your spending budget left. Spend wisely!
+          Less than 5% of your spending budget remains. Spend wisely!
         </p>
       </div>
     )}
@@ -166,8 +190,8 @@ const {
     <div style={{ height: 8, background: 'rgba(0,0,0,0.08)', borderRadius: 4, marginBottom: 12 }}>
       <div style={{
         height: '100%', borderRadius: 4,
-        background: isLowFunds ? '#F59E0B' : canSpend ? COLORS.green : COLORS.red,
-        width: `${Math.min(100, requiredSavings > 0 ? (monthlySavings / requiredSavings) * 100 : 0)}%`,
+        background: isNoFunds ? COLORS.red : isLowFunds ? '#F59E0B' : canSpend ? COLORS.green : COLORS.red,
+        width: `${Math.min(100, spendingBudget > 0 ? (availableToSpend / spendingBudget) * 100 : 0)}%`,
         transition: 'width 0.5s',
       }} />
     </div>
@@ -175,8 +199,8 @@ const {
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
       {[
         { label: 'Monthly Income',   value: monthlyIncome,    color: COLORS.green },
-        { label: 'Required Savings', value: requiredSavings,  color: '#6366F1'    },
-        { label: 'Available Spend',  value: availableToSpend, color: availableToSpend <= 0 ? COLORS.red : COLORS.teal },
+        { label: 'Auto Saved',       value: monthlySavings,   color: '#6366F1'    },
+        { label: 'Available Spend',  value: availableToSpend, color: isNoFunds ? COLORS.red : COLORS.teal },
       ].map(item => (
         <div key={item.label} style={{ textAlign: 'center' }}>
           <p style={{ margin: 0, fontSize: 12, fontWeight: 800, color: item.color }}>
@@ -283,13 +307,17 @@ const {
       </div>
 
       {/* Add Transaction Modal */}
-      {showModal && (
-        <AddTransactionModal
-          currency={currency}
-          onAdd={addTransaction}
-          onClose={() => setShowModal(false)}
-        />
-      )}
+     {showModal && (
+  <AddTransactionModal
+    currency={currency}
+    onAdd={addTransaction}
+    onClose={() => setShowModal(false)}
+    finance={{
+      savingsGoalPct: user?.savings_goal || 20,
+      totalSavingsAvailable: finance.totalSavingsAvailable
+    }}
+  />
+)}
     </div>
   )
 }

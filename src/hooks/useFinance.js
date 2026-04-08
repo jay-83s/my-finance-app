@@ -12,6 +12,8 @@ export function useFinance(savingsGoal = 20) {
   }, [])
 
   const fetchTransactions = async () => {
+    setTransactions([]) // clear old data immediately on fetch
+    setLoading(true)
     try {
       const res = await getTransactions()
       setTransactions(res.data)
@@ -41,24 +43,24 @@ export function useFinance(savingsGoal = 20) {
     .filter(t => t.type === 'expense' && t.date?.slice(0, 7) === currentMonth)
     .reduce((a, t) => a + parseFloat(t.amount), 0)
 
-  // Available to spend = income - savings + withdrawals - expenses
-  const availableToSpend  = Math.max(0, monthlyIncome - monthlySavings + monthlyWithdrawals - monthlyExpenses)
-  const spendingBudget    = Math.max(0, monthlyIncome - monthlySavings + monthlyWithdrawals)
-  const requiredSavings   = (savingsGoal / 100) * monthlyIncome
-  const remainingToSave   = Math.max(0, requiredSavings - monthlySavings)
-  const canSpend          = monthlyIncome === 0 || monthlySavings >= requiredSavings
+  // Pay yourself first math
+  const spendingBudget        = Math.max(0, monthlyIncome - monthlySavings + monthlyWithdrawals)
+  const availableToSpend      = Math.max(0, spendingBudget - monthlyExpenses)
+  const requiredSavings       = (savingsGoal / 100) * monthlyIncome
+  const remainingToSave       = Math.max(0, requiredSavings - monthlySavings)
+  const canSpend              = monthlyIncome === 0 || monthlySavings >= requiredSavings
   const totalSavingsAvailable = Math.max(0, monthlySavings - monthlyWithdrawals)
 
-  // Low funds and zero funds
+  // Fund status
   const lowFundsThreshold = spendingBudget * 0.05
-  const isLowFunds        = spendingBudget > 0 && availableToSpend <= lowFundsThreshold && availableToSpend > 0
+  const isLowFunds        = spendingBudget > 0 && availableToSpend > 0 && availableToSpend <= lowFundsThreshold
   const isNoFunds         = spendingBudget > 0 && availableToSpend <= 0
 
-  // All time totals
+  // All time balance = income - savings - expenses (withdrawals don't affect balance)
   const balance = transactions.reduce((acc, t) => {
-    if (t.type === 'income')            return acc + parseFloat(t.amount)
-    if (t.type === 'expense')           return acc - parseFloat(t.amount)
-    if (t.type === 'savings')           return acc - parseFloat(t.amount)
+    if (t.type === 'income')             return acc + parseFloat(t.amount)
+    if (t.type === 'expense')            return acc - parseFloat(t.amount)
+    if (t.type === 'savings')            return acc - parseFloat(t.amount)
     if (t.type === 'savings_withdrawal') return acc
     return acc
   }, 0)
@@ -85,15 +87,19 @@ export function useFinance(savingsGoal = 20) {
   const handleAddTransaction = async ({ label, amount, type, category }) => {
     try {
       const date = new Date().toISOString().split('T')[0]
-      await addTransaction({
+      const res = await addTransaction({
         label,
         amount: parseFloat(amount),
         type,
         category,
         date,
-        icon: type === 'savings' ? '💰' : type === 'income' ? '📥' : type === 'savings_withdrawal' ? '🔄' : '💸'
+        icon: type === 'savings'            ? '💰'
+            : type === 'income'             ? '📥'
+            : type === 'savings_withdrawal' ? '🔄'
+            : '💸'
       })
-      fetchTransactions()
+      await fetchTransactions()
+      return res.data
     } catch (error) {
       throw error
     }
@@ -102,7 +108,7 @@ export function useFinance(savingsGoal = 20) {
   const handleDeleteTransaction = async (id) => {
     try {
       await deleteTransaction(id)
-      fetchTransactions()
+      await fetchTransactions()
     } catch (error) {
       console.error('Error deleting transaction:', error)
     }

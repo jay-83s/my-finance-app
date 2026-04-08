@@ -14,7 +14,7 @@ import Admin from './screens/Admin'
 
 export default function App() {
   const [user, setUser] = useState(null)
-  const finance = useFinance(user?.savings_goal || 20)
+  const finance         = useFinance(user?.savings_goal || 20)
   const { isDark }      = useTheme()
   const { isDesktop }   = useWindowSize()
   const COLORS          = isDark ? DARK : LIGHT
@@ -24,12 +24,17 @@ export default function App() {
     if (savedUser) setUser(JSON.parse(savedUser))
   }, [])
 
-  const handleLogin  = (userData) => setUser(userData)
+  const handleLogin = (userData) => {
+    setUser(userData)
+    finance.setScreen('dashboard')
+  }
 
   const handleLogout = () => {
     localStorage.removeItem('token')
     localStorage.removeItem('user')
     setUser(null)
+    // Force full page reload to clear all React state
+    window.location.href = '/'
   }
 
   if (!user) return <Login onLogin={handleLogin} />

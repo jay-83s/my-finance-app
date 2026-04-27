@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { TrendingUp, PiggyBank, TrendingDown, ArrowLeftRight, X, ChevronRight, ChevronLeft } from "lucide-react"
 import { COLORS } from "../utils/theme"
 import { CURRENCIES } from "../utils/currency"
@@ -38,37 +38,47 @@ const TRANSACTION_TYPES = [
   },
 ]
 
-const EXPENSE_CATEGORIES  = ["Food", "Housing", "Transport", "Utilities", "Shopping", "Healthcare", "Education", "Entertainment", "Other"]
-const SAVINGS_CATEGORIES  = ["Emergency Fund", "Investment", "Goals", "Retirement", "Other"]
-const INCOME_CATEGORIES   = ["Salary", "Freelance", "Business", "Gift", "Other"]
+const EXPENSE_CATEGORIES = ["Food", "Housing", "Transport", "Utilities", "Shopping", "Healthcare", "Education", "Entertainment", "Other"]
+const SAVINGS_CATEGORIES = ["Emergency Fund", "Investment", "Goals", "Retirement", "Other"]
+const INCOME_CATEGORIES  = ["Salary", "Freelance", "Business", "Gift", "Other"]
 
 export default function AddTransactionModal({ currency, onAdd, onClose, finance }) {
-  const [step, setStep]       = useState(1)
-  const [form, setForm]       = useState({ label: "", amount: "", type: "", category: "" })
-  const [error, setError]     = useState("")
-  const [loading, setLoading] = useState(false)
+  const [step, setStep]           = useState(1)
+  const [form, setForm]           = useState({ label: "", amount: "", type: "", category: "" })
+  const [error, setError]         = useState("")
+  const [loading, setLoading]     = useState(false)
   const [successMsg, setSuccessMsg] = useState("")
+
+  // ── Double-submission guard ──
+  // On mobile, touch + synthetic click can both fire handleSubmit.
+  // This ref blocks any second call until the first one fully resolves.
+  const isSubmitting = useRef(false)
 
   const cur = CURRENCIES[currency]
 
   const getCategories = () => {
-    if (form.type === "expense")  return EXPENSE_CATEGORIES
-    if (form.type === "savings")  return SAVINGS_CATEGORIES
-    if (form.type === "income")   return INCOME_CATEGORIES
+    if (form.type === "expense") return EXPENSE_CATEGORIES
+    if (form.type === "savings") return SAVINGS_CATEGORIES
+    if (form.type === "income")  return INCOME_CATEGORIES
     return ["Other"]
   }
 
   const selectedType = TRANSACTION_TYPES.find(t => t.value === form.type)
 
   const handleSubmit = async () => {
+    // Block if already in flight
+    if (isSubmitting.current) return
     if (!form.label || !form.amount) return
     if (form.type !== "savings_withdrawal" && !form.category) return
+
+    isSubmitting.current = true
     setError("")
     setLoading(true)
+
     try {
       const result = await onAdd({
         ...form,
-        category: form.category || "Savings Withdrawal"
+        category: form.category || "Savings Withdrawal",
       })
       if (result?.autoSaved) {
         setSuccessMsg(`✅ Income added! KES ${result.autoSaved.toLocaleString()} auto saved.`)
@@ -77,8 +87,11 @@ export default function AddTransactionModal({ currency, onAdd, onClose, finance 
         onClose()
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Something went wrong')
+      setError(err.response?.data?.message || "Something went wrong")
+      // Only release the guard on error so user can retry
+      isSubmitting.current = false
     }
+
     setLoading(false)
   }
 
@@ -103,7 +116,10 @@ export default function AddTransactionModal({ currency, onAdd, onClose, finance 
               Step {step} of 2
             </p>
           </div>
-          <button onClick={onClose} style={{ background: "#F0F4F8", border: "none", borderRadius: 10, padding: 8, cursor: "pointer", display: "flex" }}>
+          <button
+            onClick={onClose}
+            style={{ background: "#F0F4F8", border: "none", borderRadius: 10, padding: 8, cursor: "pointer", display: "flex" }}
+          >
             <X size={18} color={COLORS.muted} />
           </button>
         </div>
@@ -112,7 +128,7 @@ export default function AddTransactionModal({ currency, onAdd, onClose, finance 
         <div style={{ height: 4, background: "#F0F4F8", borderRadius: 4, marginBottom: 24 }}>
           <div style={{
             height: "100%", borderRadius: 4, background: COLORS.teal,
-            width: step === 1 ? "50%" : "100%", transition: "width 0.3s"
+            width: step === 1 ? "50%" : "100%", transition: "width 0.3s",
           }} />
         </div>
 
@@ -217,10 +233,10 @@ export default function AddTransactionModal({ currency, onAdd, onClose, finance 
             </p>
             <input
               placeholder={
-                form.type === "savings"             ? "e.g. Extra emergency fund" :
-                form.type === "expense"             ? "e.g. Naivas Shopping" :
-                form.type === "savings_withdrawal"  ? "e.g. Moving savings for rent" :
-                "e.g. Monthly Salary"
+                form.type === "savings"            ? "e.g. Extra emergency fund"      :
+                form.type === "expense"            ? "e.g. Naivas Shopping"           :
+                form.type === "savings_withdrawal" ? "e.g. Moving savings for rent"   :
+                                                     "e.g. Monthly Salary"
               }
               value={form.label}
               onChange={e => setForm({ ...form, label: e.target.value })}
@@ -258,7 +274,7 @@ export default function AddTransactionModal({ currency, onAdd, onClose, finance 
               />
             </div>
 
-            {/* Category — not for savings withdrawal */}
+            {/* Category */}
             {form.type !== "savings_withdrawal" && (
               <>
                 <p style={{ margin: "0 0 8px", fontSize: 13, fontWeight: 600, color: COLORS.text }}>
@@ -288,16 +304,16 @@ export default function AddTransactionModal({ currency, onAdd, onClose, finance 
             {/* Error */}
             {error && (
               <div style={{
-                background: '#FFF5F5', border: '1.5px solid #FCA5A5',
-                borderRadius: 12, padding: '12px 16px', marginBottom: 16,
-                display: 'flex', alignItems: 'flex-start', gap: 10,
+                background: "#FFF5F5", border: "1.5px solid #FCA5A5",
+                borderRadius: 12, padding: "12px 16px", marginBottom: 16,
+                display: "flex", alignItems: "flex-start", gap: 10,
               }}>
                 <span style={{ fontSize: 18, flexShrink: 0 }}>🚫</span>
                 <div>
                   <p style={{ margin: 0, fontWeight: 700, color: COLORS.red, fontSize: 13 }}>
                     Cannot process
                   </p>
-                  <p style={{ margin: '2px 0 0', color: COLORS.red, fontSize: 12 }}>
+                  <p style={{ margin: "2px 0 0", color: COLORS.red, fontSize: 12 }}>
                     {error}
                   </p>
                 </div>
@@ -307,7 +323,7 @@ export default function AddTransactionModal({ currency, onAdd, onClose, finance 
             {/* Actions */}
             <div style={{ display: "flex", gap: 10 }}>
               <button
-                onClick={() => { setStep(1); setError("") }}
+                onClick={() => { setStep(1); setError(""); isSubmitting.current = false }}
                 style={{
                   flex: 1, padding: 14, borderRadius: 14,
                   border: "1.5px solid #E8EEF4", background: "#fff",
@@ -319,12 +335,17 @@ export default function AddTransactionModal({ currency, onAdd, onClose, finance 
                 <ChevronLeft size={16} /> Back
               </button>
               <button
-                onClick={handleSubmit}
+                // Use onPointerUp instead of onClick to fire once on both touch and mouse
+                onPointerUp={handleSubmit}
                 disabled={loading || !form.label || !form.amount || (form.type !== "savings_withdrawal" && !form.category)}
                 style={{
                   flex: 2, padding: 14, borderRadius: 14, border: "none",
-                  background: loading || !form.label || !form.amount ? "#E8EEF4" : COLORS.teal,
-                  color: loading || !form.label || !form.amount ? COLORS.muted : "#fff",
+                  background: loading || !form.label || !form.amount
+                    ? "#E8EEF4"
+                    : COLORS.teal,
+                  color: loading || !form.label || !form.amount
+                    ? COLORS.muted
+                    : "#fff",
                   cursor: loading ? "not-allowed" : "pointer",
                   fontWeight: 700, fontSize: 15,
                   fontFamily: "'DM Sans', sans-serif",
@@ -335,6 +356,7 @@ export default function AddTransactionModal({ currency, onAdd, onClose, finance 
             </div>
           </div>
         )}
+
       </div>
     </div>
   )

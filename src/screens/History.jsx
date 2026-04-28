@@ -26,7 +26,7 @@ export default function History({ finance, isDesktop }) {
   return (
     <div style={{ padding: isDesktop ? "32px 40px 60px" : "24px 20px 100px" }}>
 
-      {/* ── HEADER BANNER — abstract finance dark ── */}
+      {/* ── HEADER BANNER — modern card payment transaction ── */}
       <div style={{
         position: 'relative', borderRadius: 24, overflow: 'hidden',
         marginBottom: 20, minHeight: 140,
@@ -35,7 +35,7 @@ export default function History({ finance, isDesktop }) {
       }}>
         <div style={{
           position: 'absolute', inset: 0,
-          backgroundImage: 'url(https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=1600&q=80)',
+          backgroundImage: 'url(https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=1600&q=80)',
           backgroundSize: 'cover', backgroundPosition: 'center',
           zIndex: 0,
         }} />

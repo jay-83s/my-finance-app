@@ -115,7 +115,7 @@ export default function Profile({ user, onLogout, isDesktop }) {
         }}>
           <div style={{
             position: 'absolute', inset: 0,
-            backgroundImage: 'url(https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=1600&q=80)',
+            backgroundImage: 'url(https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1600&q=80)',
             backgroundSize: 'cover', backgroundPosition: 'center',
             zIndex: 0,
           }} />

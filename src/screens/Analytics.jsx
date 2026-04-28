@@ -63,11 +63,11 @@ export default function Analytics({ finance, isDesktop }) {
         display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
         padding: '24px',
       }}>
-        {/* Unsplash aerial city night image */}
+        {/* Unsplash stock market chart on dark screen — matches analytics function */}
         <div style={{
           position: 'absolute', inset: 0,
-          backgroundImage: 'url(https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=1600&q=80)',
-          backgroundSize: 'cover', backgroundPosition: 'center bottom',
+          backgroundImage: 'url(https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=1600&q=80)',
+          backgroundSize: 'cover', backgroundPosition: 'center',
           zIndex: 0,
         }} />
         <div style={{
